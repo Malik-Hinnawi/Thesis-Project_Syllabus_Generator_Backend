@@ -9,6 +9,8 @@ class User(db.Model):
     password_hash = db.Column(db.Text(), nullable=False)
     is_staff = db.Column(db.Boolean(), default=False)
     is_active = db.Column(db.Boolean(), default=False)
+    files = db.relationship('File', backref='user', lazy=True)
+    chats = db.relationship('Chat', backref='user', lazy=True)
 
     def __repr__(self):
         return f"<User {self.username}>"

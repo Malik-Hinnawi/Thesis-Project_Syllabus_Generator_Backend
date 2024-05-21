@@ -3,7 +3,7 @@ from flask import request
 from ..models.users import User
 from werkzeug.security import generate_password_hash, check_password_hash
 from http import HTTPStatus
-from flask_jwt_extended import  create_access_token, create_refresh_token, jwt_required, get_jwt_identity
+from flask_jwt_extended import create_access_token, create_refresh_token, jwt_required, get_jwt_identity
 from werkzeug.exceptions import Conflict, BadRequest
 
 auth_namespace = Namespace('auth', description='Authentication for authentication')
@@ -63,7 +63,6 @@ class SignUp(Resource):
 
 
 
-
 @auth_namespace.route('/login')
 class Login(Resource):
     @auth_namespace.expect(login_model)
@@ -77,12 +76,13 @@ class Login(Resource):
         password = data.get('password')
         user = User.query.filter_by(email=email).first()
         if user is not None and check_password_hash(user.password_hash, password):
-            access_token = create_access_token(identity=user.username)
-            refresh_token = create_refresh_token(identity=user.username)
+            access_token = create_access_token(identity=user.id)
+            refresh_token = create_refresh_token(identity=user.id)
 
             response = {
                 'access_token': access_token,
                 'refresh_token': refresh_token,
+                'username': user.username
             }
             return response, HTTPStatus.OK
         raise BadRequest("Invalid Username or Password")
