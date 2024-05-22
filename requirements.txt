@@ -153,3 +153,4 @@ pandas
 joblib
 nltk
 numpy
+flask-cors
