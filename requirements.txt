@@ -144,4 +144,12 @@ webencodings==0.5.1
 websocket-client==1.8.0
 Werkzeug==2.0.2
 zipp==3.6.0
-google-cloud-storage
+google-cloud-storage==2.16.0
+PyPDF2==3.0.1
+isodate==0.6.1
+google-api-python-client
+scikit-learn
+pandas
+joblib
+nltk
+numpy

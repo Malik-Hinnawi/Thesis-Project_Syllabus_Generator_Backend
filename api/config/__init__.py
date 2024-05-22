@@ -1,7 +1,6 @@
 import os
 from decouple import config
 from datetime import timedelta
-from google.cloud import storage
 
 BASE_DIR = os.path.dirname(os.path.realpath(__file__))
 
@@ -14,6 +13,7 @@ class Config:
     GOOGLE_APPLICATION_CREDENTIALS = config('GOOGLE_APPLICATION_CREDENTIALS')
     GOOGLE_CLOUD_BUCKET = config('GOOGLE_CLOUD_BUCKET')
     GOOGLE_CLOUD_PROJECT = config('GOOGLE_CLOUD_PROJECT')
+    API_KEY = config('API_KEY')
 
 
 class DevConfig(Config):
