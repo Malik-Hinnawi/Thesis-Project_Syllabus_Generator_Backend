@@ -78,6 +78,7 @@ class UploadFile(Resource):
 
         return new_file, HTTPStatus.CREATED
 
+
 @file_namespace.route('/<int:chat_id>/files')
 class GetFiles(Resource):
     @jwt_required()
