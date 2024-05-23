@@ -20,11 +20,11 @@ def create_app(config=config_dict['dev']):
     app = Flask(__name__)
     app.config.from_object(config)
 
-    def load_model_and_tokenizer():
-        model_name = 'bert-large-uncased-whole-word-masking-finetuned-squad'
-        app.model = BertForQuestionAnswering.from_pretrained(model_name)
-        app.tokenizer = BertTokenizer.from_pretrained(model_name)
-    load_model_and_tokenizer()
+    # def load_model_and_tokenizer():
+    #     model_name = 'bert-large-uncased-whole-word-masking-finetuned-squad'
+    #     app.model = BertForQuestionAnswering.from_pretrained(model_name)
+    #     app.tokenizer = BertTokenizer.from_pretrained(model_name)
+    # load_model_and_tokenizer()
 
     CORS(app)
 
