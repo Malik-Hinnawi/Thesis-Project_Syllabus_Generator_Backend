@@ -199,8 +199,7 @@ class QAMessages(Resource):
                                     )
         answer = q_a_generator.generate(question)
 
-        response_message = ResponseMessage(answer_model,
-                                           chat_id=chat_id,
+        response_message = ResponseMessage(chat_id=chat_id,
                                            message_id=new_message.id,
                                            content=answer,
                                            link=link,
