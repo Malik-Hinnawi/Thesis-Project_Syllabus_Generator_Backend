@@ -14,7 +14,7 @@ blinker==1.4
 Brotli==1.0.9
 build==1.1.1
 CacheControl==0.14.0
-certifi==2020.6.20
+certifi==2021.10.8
 cffi==1.16.0
 chardet==4.0.0
 charset-normalizer==3.3.2
@@ -154,3 +154,7 @@ joblib
 nltk
 numpy
 flask-cors
+torch==2.2.2
+transformers==4.21.0
+selenium==4.21.0
+chromedriver_autoinstall

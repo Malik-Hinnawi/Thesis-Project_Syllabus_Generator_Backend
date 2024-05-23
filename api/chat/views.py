@@ -1,5 +1,5 @@
 from flask_restx import Namespace, Resource, fields
-from flask import request
+from flask import request, current_app
 from http import HTTPStatus
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from ..models.users import User
@@ -8,22 +8,29 @@ from .helpers.generation_helper import (list_blobs_with_prefix,
                                         load_models_and_vectorizers,
                                         SyllabusGenerator,
                                         get_sorted_by_importance,
-                                        print_output)
-import numpy
+                                        )
+from .helpers.q_and_a_helper import QAGenerator
+from .helpers.youtube_helper import yh
+from werkzeug.exceptions import BadRequest
 
 chat_namespace = Namespace('chat', description='Used to store chats')
 
 chat_model = chat_namespace.model(
     'Chat', {
-        'id': fields.Integer()
+        'id': fields.Integer,
+        'type': fields.Integer()
     }
 )
-
-
 
 create_message_model = chat_namespace.model(
     'CreateMessage', {
         'content': fields.String(required=True, description="Content of the message"),
+    }
+)
+
+delete_message_model = chat_namespace.model(
+    'DeleteMessage', {
+        'message': fields.String(description="Content of a message"),
     }
 )
 
@@ -35,7 +42,9 @@ response_message_model = chat_namespace.model(
         'title': fields.String(),
         'link': fields.String(),
         'estimated_time': fields.Float(),
-        'chapter': fields.Integer()
+        'chapter': fields.Integer(),
+        'content': fields.String(),
+        'topics': fields.String()
     }
 )
 
@@ -49,6 +58,18 @@ message_model = chat_namespace.model(
         'response_messages': fields.List(fields.Nested(response_message_model)),
     }
 )
+
+answer_model = chat_namespace.model(
+    'AnswerMessage', {
+        'id': fields.Integer(),
+        'chat_id': fields.Integer(),
+        'message_id': fields.Integer(),
+        'title': fields.String(),
+        'link': fields.String(),
+        'content': fields.String()
+    }
+)
+
 
 @chat_namespace.route('/user/chats')
 class UserChats(Resource):
@@ -69,37 +90,37 @@ class UserChats(Resource):
         """
         Create a new chat for the current user
         """
+        data = request.get_json()
         current_user_id = get_jwt_identity()
-        new_chat = Chat(user_id=current_user_id)
+        if data['type'] not in [0, 1]:
+            raise BadRequest("type should either be 0 (syllabus generator) or 1 (q and a)")
+        new_chat = Chat(user_id=current_user_id, type=data['type'])
         new_chat.save()
         return new_chat, HTTPStatus.CREATED
 
 
-@chat_namespace.route('/<int:chat_id>/messages')
-class ChatMessages(Resource):
+@chat_namespace.route('/user/chats/<int:chat_id>')
+class UserDeleteChats(Resource):
     @jwt_required()
-    @chat_namespace.marshal_list_with(message_model)
-    def get(self, chat_id):
+    @chat_namespace.marshal_with(delete_message_model)
+    def delete(self, chat_id):
         """
-        Get all messages for a specific chat
+        Delete a chat for the current user
         """
-        current_user_id = get_jwt_identity()
-        chat = Chat.query.filter_by(id=chat_id, user_id=current_user_id).first_or_404()
-        messages = chat.messages
+        chat = Chat.query.filter_by(id=chat_id).first_or_404()
+        chat.delete()
+        response = {'message': 'Chat deleted successfully'}
+        return response, HTTPStatus.OK
 
-        # Fetch associated response messages for each message
-        for message in messages:
-            response_messages = ResponseMessage.query.filter_by(message_id=message.id).all()
-            message.response_messages = response_messages
 
-        return messages
-
+@chat_namespace.route('/<int:chat_id>/syllabus-generator')
+class SyllabusGeneratorMessages(Resource):
     @jwt_required()
     @chat_namespace.expect(create_message_model)
     @chat_namespace.marshal_list_with(response_message_model)
     def post(self, chat_id):
         """
-        Add a new message to a chat and get a response
+        Add a new message to a chat and get a syllabus generation as a response
         """
         models = list_blobs_with_prefix("models/")
         vectorizers = list_blobs_with_prefix("vectorizers/")
@@ -107,6 +128,8 @@ class ChatMessages(Resource):
 
         current_user_id = get_jwt_identity()
         chat = Chat.query.filter_by(id=chat_id, user_id=current_user_id).first_or_404()
+        if chat.type != 0:
+            raise BadRequest("chat type should be 0 (syllabus generator)")
 
         # Create and save the user's message
         new_message = Message(chat_id=chat.id, content=data['content'])
@@ -127,41 +150,81 @@ class ChatMessages(Resource):
                 title = str(result[5][0])
                 link = str(result[5][1])
 
+            content = f"""[{float(result[4])} HOURS] FROM '{result[0]}',
+             you should look chapter {str(result[2])}.\n\t
+             Chapter {str(result[2])} Main Subjects:\n\t\t\t{str(result[3])}"""
+
             response_message = ResponseMessage(
                 chat_id=chat_id,
                 message_id=new_message.id,
-                title= title,
+                title=title,
                 estimated_time=float(result[4]),
                 chapter=str(result[2]),
-                link=link
+                link=link,
+                topics=result[3],
+                content=content
             )
             response_message.save()
             response_messages.append(response_message)
-            n+=1
+            n += 1
 
         return response_messages, HTTPStatus.CREATED
 
 
-@chat_namespace.route('/test')
-class Test(Resource):
-    def get(self):
-        models = list_blobs_with_prefix("models/")
-        vectorizers = list_blobs_with_prefix("vectorizers/")
-        books = list_blobs_with_prefix("Books/")
-        print("Models:", models)
-        print("Vectorizers:", vectorizers)
-        print("Books:", books)
+@chat_namespace.route('/<int:chat_id>/q-and-a')
+class QAMessages(Resource):
+    @jwt_required()
+    @chat_namespace.expect(create_message_model)
+    @chat_namespace.marshal_with(answer_model)
+    def post(self, chat_id):
+        """
+        Add a new message to a chat and get a response
+        """
+        data = request.get_json()
+        question = data['content']
+        current_user_id = get_jwt_identity()
+        chat = Chat.query.filter_by(id=chat_id, user_id=current_user_id).first_or_404()
 
-        input_string_2 = """
-        In computing, threads enable programs to execute multiple tasks simultaneously. 
-        They divide the workload into smaller chunks, allowing for efficient resource allocation and parallel execution. 
-        This enhances performance and responsiveness, akin to a juggler effortlessly managing multiple objects at once."""
+        if chat.type != 1:
+            raise BadRequest("chat type should be 1 (q and a)")
 
-        model_dict = load_models_and_vectorizers(models, vectorizers)
-        syllabus = SyllabusGenerator(input_string_2,model_dict)
-        syllabus.get_related_all_chapters()
-        result = get_sorted_by_importance(syllabus.get_statistics_per_book())
-        print_output(result)
+        # Create and save the user's message
+        new_message = Message(chat_id=chat.id, content=question)
+        new_message.save()
 
-        response = {"message": "helloworld"}
-        return response, HTTPStatus.OK
+        link = yh.youtube_videos(question)
+        q_a_generator = QAGenerator(current_app.model,
+                                    current_app.tokenizer,
+                                    'https://www.geeksforgeeks.org/'
+                                    )
+        answer = q_a_generator.generate(question)
+
+        response_message = ResponseMessage(answer_model,
+                                           chat_id=chat_id,
+                                           message_id=new_message.id,
+                                           content=answer,
+                                           link=link,
+                                           )
+        response_message.save()
+
+        return response_message, HTTPStatus.CREATED
+
+
+@chat_namespace.route('/<int:chat_id>/messages')
+class ChatMessages(Resource):
+    @jwt_required()
+    @chat_namespace.marshal_list_with(message_model)
+    def get(self, chat_id):
+        """
+        Get all messages for a specific chat
+        """
+        current_user_id = get_jwt_identity()
+        chat = Chat.query.filter_by(id=chat_id, user_id=current_user_id).first_or_404()
+        messages = chat.messages
+
+        # Fetch associated response messages for each message
+        for message in messages:
+            response_messages = ResponseMessage.query.filter_by(message_id=message.id).all()
+            message.response_messages = response_messages
+
+        return messages
