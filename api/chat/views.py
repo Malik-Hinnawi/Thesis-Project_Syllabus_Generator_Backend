@@ -199,9 +199,10 @@ class QAMessages(Resource):
                                     )
         title = None
         answer = q_a_generator.generate(question)
-        if link != None:
-            link = link[1]
-            title = link[0]
+        if link is not None:
+            temp = link
+            link = temp[1]
+            title = temp[0]
 
         response_message = ResponseMessage(chat_id=chat_id,
                                            message_id=new_message.id,
