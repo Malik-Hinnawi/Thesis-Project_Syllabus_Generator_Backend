@@ -150,8 +150,8 @@ class SyllabusGeneratorMessages(Resource):
                 title = str(result[5][0])
                 link = str(result[5][1])
 
-            content = f"""[{float(result[4])} HOURS] FROM '{result[0]}',
-             you should look chapter {str(result[2])}.\n\t
+            content = f"""[Estimated time: {float(result[4])} HOURS] FROM '{result[0]}' BOOK,
+             you should check chapter {str(result[2])}.\n\t
              Chapter {str(result[2])} Main Subjects:\n\t\t\t{str(result[3])}"""
 
             response_message = ResponseMessage(
@@ -197,12 +197,17 @@ class QAMessages(Resource):
                                     current_app.tokenizer,
                                     'https://www.geeksforgeeks.org/'
                                     )
+        title = None
         answer = q_a_generator.generate(question)
+        if link != None:
+            link = link[1]
+            title = link[0]
 
         response_message = ResponseMessage(chat_id=chat_id,
                                            message_id=new_message.id,
                                            content=answer,
                                            link=link,
+                                           title=title
                                            )
         response_message.save()
 
