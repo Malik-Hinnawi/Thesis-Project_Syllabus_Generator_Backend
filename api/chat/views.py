@@ -8,6 +8,7 @@ from .helpers.generation_helper import (list_blobs_with_prefix,
                                         load_models_and_vectorizers,
                                         SyllabusGenerator,
                                         get_sorted_by_importance,
+                                        delete_blobs
                                         )
 from .helpers.q_and_a_helper import QAGenerator
 from .helpers.youtube_helper import yh
@@ -168,6 +169,7 @@ class SyllabusGeneratorMessages(Resource):
             response_messages.append(response_message)
             n += 1
 
+        delete_blobs(vectorizers, models)
         return response_messages, HTTPStatus.CREATED
 
 
@@ -175,7 +177,7 @@ class SyllabusGeneratorMessages(Resource):
 class QAMessages(Resource):
     @jwt_required()
     @chat_namespace.expect(create_message_model)
-    @chat_namespace.marshal_with(answer_model)
+    @chat_namespace.marshal_list_with(answer_model)
     def post(self, chat_id):
         """
         Add a new message to a chat and get a response
@@ -211,8 +213,8 @@ class QAMessages(Resource):
                                            title=title
                                            )
         response_message.save()
-
-        return response_message, HTTPStatus.CREATED
+        response_messages = [response_message]
+        return response_messages, HTTPStatus.CREATED
 
 
 @chat_namespace.route('/<int:chat_id>/messages')

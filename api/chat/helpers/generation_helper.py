@@ -26,6 +26,20 @@ def upload_blob(bucket_name, source_file_name, destination_blob_name):
     print(f"File {source_file_name} uploaded to {destination_blob_name}.")
 
 
+def delete_blobs(vectorizers, models):
+    """
+    Delete vectorizer and model files
+    """
+    for path in vectorizers + models:
+        try:
+            os.remove(path)
+            print(f"Deleted file: {path}")
+        except FileNotFoundError:
+            print(f"File not found: {path}")
+        except Exception as e:
+            print(f"Error occurred while deleting file {path}: {e}")
+
+
 def get_hours(x):
     output = 1
     if x >= 0.5:
@@ -142,22 +156,6 @@ def get_sorted_by_importance(result):
     if len(output) > 0:
         output[0].append(yh.youtube_videos(get_key_words(output[0][3])))
     return output
-
-
-def print_output(sorted_results):
-    print("GENERATED SYLLABUS:")
-    print("--" * 45)
-    n = 1
-    for i in sorted_results:
-        output = f"""[{i[4]} HOURS] FROM '{i[0]}', you should look chapter {i[2]}.\n
-        \tChapter {i[2]} Main Subjects:\n\t\t\t{i[3]}"""
-
-        if n == 1 and len(i) >= 6:
-            output += f"\n\tPlease watch {i[5][0]} from the link below:\n\t\t\t {i[5][1]}"
-        output += "\n\n\n"
-
-        print(output)
-        n += 1
 
 
 def load_models_and_vectorizers(models, vectorizers):
