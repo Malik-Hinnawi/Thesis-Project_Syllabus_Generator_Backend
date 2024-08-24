@@ -39,7 +39,7 @@ pip install -r requirements.txt
 - **Halil Can Uyanık**: Frontend Development - Responsible for designing and implementing the user interface that interacts with the backend.
 
 ## License:
-
+Can be seen under LICENSE in the main branch
 ## Contact:
 For any questions or issues, please reach out to the project maintainers:
 
